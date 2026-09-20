@@ -1,0 +1,1755 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Apex Communication & Mobile Care POS</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#eef2ff',
+              100: '#e0e7ff',
+              500: '#6366f1',
+              600: '#4f46e5',
+              700: '#4338ca',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600;800&display=swap" rel="stylesheet">
+
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- JsBarcode & QRCode -->
+  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js"></script>
+  <!-- Canvas Confetti -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+    }
+    .font-mono {
+      font-family: 'JetBrains Mono', monospace;
+    }
+    
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #090d16;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #1e293b;
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #334155;
+    }
+
+    /* Print Styles for 80mm Thermal Printer */
+    @media print {
+      body * {
+        visibility: hidden;
+      }
+      #printable-area, #printable-area * {
+        visibility: visible;
+      }
+      #printable-area {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 80mm !important;
+        max-width: 80mm !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        background: #ffffff !important;
+        color: #000000 !important;
+        font-family: 'JetBrains Mono', monospace !important;
+      }
+      .no-print {
+        display: none !important;
+      }
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col antialiased selection:bg-indigo-500 selection:text-white">
+
+  <!-- TOP APP HEADER -->
+  <header class="bg-slate-900/90 backdrop-blur-md border-b border-slate-800 sticky top-0 z-40 select-none">
+    <div class="max-w-[1800px] mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+      
+      <!-- Brand Logo -->
+      <div class="flex items-center space-x-3">
+        <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-violet-600 flex items-center justify-center shadow-lg shadow-indigo-500/30">
+          <i data-lucide="sparkles" class="w-5 h-5 text-white"></i>
+        </div>
+        <div>
+          <span id="header-store-name" class="font-extrabold text-base sm:text-lg tracking-tight bg-gradient-to-r from-white via-slate-100 to-slate-400 bg-clip-text text-transparent">
+            Apex Communication & Mobile Care
+          </span>
+          <div class="flex items-center space-x-2 text-[11px] text-slate-400">
+            <span class="inline-block w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+            <span>POS, Repairs & Utility Bills System</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Navigation Tabs -->
+      <nav class="hidden lg:flex items-center space-x-1 bg-slate-950/80 p-1 rounded-2xl border border-slate-800">
+        <button onclick="switchTab('pos')" id="tab-pos" class="nav-btn flex items-center space-x-2 px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-indigo-600 text-white shadow-md transition-all">
+          <i data-lucide="shopping-bag" class="w-4 h-4"></i>
+          <span>Register (POS)</span>
+        </button>
+
+        <button onclick="switchTab('repairs')" id="tab-repairs" class="nav-btn flex items-center space-x-2 px-3.5 py-1.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 transition-all">
+          <i data-lucide="smartphone" class="w-4 h-4"></i>
+          <span>Phone Repairs</span>
+          <span id="badge-active-repairs" class="px-1.5 py-0.2 rounded-full bg-indigo-500/30 text-indigo-300 text-[10px]">0</span>
+        </button>
+
+        <button onclick="switchTab('bills')" id="tab-bills" class="nav-btn flex items-center space-x-2 px-3.5 py-1.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 transition-all">
+          <i data-lucide="receipt" class="w-4 h-4"></i>
+          <span>Bill Payments</span>
+          <span class="px-1.5 py-0.2 rounded-full bg-emerald-500/20 text-emerald-400 text-[10px]">Tiered</span>
+        </button>
+
+        <button onclick="switchTab('debtors')" id="tab-debtors" class="nav-btn flex items-center space-x-2 px-3.5 py-1.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 transition-all">
+          <i data-lucide="book-open" class="w-4 h-4"></i>
+          <span>Debtors Book (ණය)</span>
+        </button>
+
+        <button onclick="switchTab('products')" id="tab-products" class="nav-btn flex items-center space-x-2 px-3.5 py-1.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 transition-all">
+          <i data-lucide="package" class="w-4 h-4"></i>
+          <span>Inventory</span>
+        </button>
+
+        <button onclick="switchTab('orders')" id="tab-orders" class="nav-btn flex items-center space-x-2 px-3.5 py-1.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 transition-all">
+          <i data-lucide="file-text" class="w-4 h-4"></i>
+          <span>Orders Log</span>
+        </button>
+
+        <button onclick="switchTab('settings')" id="tab-settings" class="nav-btn flex items-center space-x-2 px-3.5 py-1.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 transition-all">
+          <i data-lucide="settings" class="w-4 h-4"></i>
+          <span>Settings</span>
+        </button>
+      </nav>
+
+      <!-- Right Fast Controls -->
+      <div class="flex items-center space-x-2">
+        <button onclick="openNewRepairModal()" class="hidden sm:flex items-center space-x-1.5 px-3 py-1.5 bg-indigo-600/20 text-indigo-300 border border-indigo-500/40 rounded-xl text-xs font-bold hover:bg-indigo-600 hover:text-white transition-all">
+          <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+          <span>Receive Phone</span>
+        </button>
+
+        <div class="bg-slate-800 px-3 py-1.5 rounded-xl border border-slate-700 text-xs font-mono text-slate-300 flex items-center space-x-1.5">
+          <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+          <span>Terminal 1</span>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Mobile Nav Sub-Bar -->
+    <div class="lg:hidden flex items-center justify-around bg-slate-950 py-2 border-t border-slate-800 px-2 overflow-x-auto text-[11px]">
+      <button onclick="switchTab('pos')" class="flex flex-col items-center px-2 py-1 text-indigo-400 font-bold">
+        <i data-lucide="shopping-bag" class="w-4 h-4 mb-0.5"></i>
+        <span>Register</span>
+      </button>
+      <button onclick="switchTab('repairs')" class="flex flex-col items-center px-2 py-1 text-slate-400">
+        <i data-lucide="smartphone" class="w-4 h-4 mb-0.5"></i>
+        <span>Repairs</span>
+      </button>
+      <button onclick="switchTab('bills')" class="flex flex-col items-center px-2 py-1 text-slate-400">
+        <i data-lucide="receipt" class="w-4 h-4 mb-0.5"></i>
+        <span>Bills</span>
+      </button>
+      <button onclick="switchTab('debtors')" class="flex flex-col items-center px-2 py-1 text-slate-400">
+        <i data-lucide="book-open" class="w-4 h-4 mb-0.5"></i>
+        <span>Debtors</span>
+      </button>
+      <button onclick="switchTab('products')" class="flex flex-col items-center px-2 py-1 text-slate-400">
+        <i data-lucide="package" class="w-4 h-4 mb-0.5"></i>
+        <span>Stock</span>
+      </button>
+      <button onclick="switchTab('settings')" class="flex flex-col items-center px-2 py-1 text-slate-400">
+        <i data-lucide="settings" class="w-4 h-4 mb-0.5"></i>
+        <span>Settings</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- MAIN APP CONTAINER -->
+  <main class="flex-1 flex flex-col min-h-0 relative">
+    
+    <!-- ==================== VIEW 1: POS REGISTER ==================== -->
+    <section id="view-pos" class="view-panel flex-1 flex flex-col lg:flex-row min-h-0 overflow-hidden">
+      
+      <!-- Catalog Left Area -->
+      <div class="flex-1 flex flex-col min-h-0 p-4 sm:p-6 overflow-y-auto space-y-5">
+        
+        <!-- Operations Hub 3-Card Banner -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+          <!-- Card 1: Phone Repairs -->
+          <div class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-indigo-950/80 via-slate-900 to-slate-900 border border-indigo-500/30 p-4 shadow-xl hover:border-indigo-500/60 transition-all">
+            <div class="flex items-start justify-between">
+              <div class="w-9 h-9 rounded-xl bg-indigo-600/20 text-indigo-400 border border-indigo-500/30 flex items-center justify-center">
+                <i data-lucide="smartphone" class="w-4 h-4"></i>
+              </div>
+              <span id="pos-repairs-badge" class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                0 Active Jobs
+              </span>
+            </div>
+            <div class="mt-2.5">
+              <h3 class="text-sm font-black text-white">Phone Repair Desk</h3>
+              <p class="text-[11px] text-slate-400 mt-0.5">Receive phones & print 80mm chit</p>
+            </div>
+            <div class="mt-3 flex items-center gap-2">
+              <button onclick="openNewRepairModal()" class="flex-1 py-1.5 px-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs flex items-center justify-center space-x-1 shadow">
+                <i data-lucide="plus" class="w-3 h-3"></i>
+                <span>Receive Device</span>
+              </button>
+              <button onclick="switchTab('repairs')" class="py-1.5 px-3 rounded-xl bg-slate-800 text-slate-200 font-semibold text-xs border border-slate-700">
+                View
+              </button>
+            </div>
+          </div>
+
+          <!-- Card 2: Utility Bills -->
+          <div class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-emerald-950/80 via-slate-900 to-slate-900 border border-emerald-500/30 p-4 shadow-xl hover:border-emerald-500/60 transition-all">
+            <div class="flex items-start justify-between">
+              <div class="w-9 h-9 rounded-xl bg-emerald-600/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center">
+                <i data-lucide="receipt" class="w-4 h-4"></i>
+              </div>
+              <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                Tiered Fee
+              </span>
+            </div>
+            <div class="mt-2.5">
+              <h3 class="text-sm font-black text-white">Utility Bill Counter</h3>
+              <p class="text-[11px] text-slate-400 mt-0.5">එකාබද්ද වලව මව් නදී, CEB, Water</p>
+            </div>
+            <div class="mt-3">
+              <button onclick="switchTab('bills')" class="w-full py-1.5 px-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-bold text-xs flex items-center justify-center space-x-1 shadow">
+                <span>Pay Utility Bills</span>
+                <i data-lucide="arrow-right" class="w-3 h-3"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- Card 3: Debtors -->
+          <div class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-amber-950/80 via-slate-900 to-slate-900 border border-amber-500/30 p-4 shadow-xl hover:border-amber-500/60 transition-all">
+            <div class="flex items-start justify-between">
+              <div class="w-9 h-9 rounded-xl bg-amber-600/20 text-amber-400 border border-amber-500/30 flex items-center justify-center">
+                <i data-lucide="book-open" class="w-4 h-4"></i>
+              </div>
+              <span id="pos-debtors-badge" class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                Rs. 0
+              </span>
+            </div>
+            <div class="mt-2.5">
+              <h3 class="text-sm font-black text-white">Debtors Book (ණය)</h3>
+              <p class="text-[11px] text-slate-400 mt-0.5">Credit sales, settlements & ledgers</p>
+            </div>
+            <div class="mt-3">
+              <button onclick="switchTab('debtors')" class="w-full py-1.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-500/30 font-bold text-xs flex items-center justify-center space-x-1 shadow">
+                <span>Open Debtors Book</span>
+                <i data-lucide="arrow-right" class="w-3 h-3"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Search & Category Filters -->
+        <div class="bg-slate-900/80 p-3 rounded-2xl border border-slate-800 space-y-3">
+          <div class="flex items-center gap-2">
+            <div class="relative flex-1">
+              <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3.5 top-3"></i>
+              <input type="text" id="pos-search" oninput="renderProductCatalog()" placeholder="Search accessories, parts, cables, reloads... (Press / to focus)" class="w-full bg-slate-950 border border-slate-800 rounded-xl pl-10 pr-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500">
+            </div>
+            <button onclick="openCustomItemModal()" class="px-3 py-2 rounded-xl bg-slate-800 text-slate-200 text-xs font-semibold hover:bg-slate-700 border border-slate-700 whitespace-nowrap">
+              + Custom Item
+            </button>
+          </div>
+
+          <!-- Categories Tabs -->
+          <div id="category-pills" class="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs">
+            <!-- Dynamic Category Pills Rendered via JS -->
+          </div>
+        </div>
+
+        <!-- Products Grid -->
+        <div id="products-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 2xl:grid-cols-5 gap-3">
+          <!-- Rendered via JS -->
+        </div>
+
+      </div>
+
+      <!-- Right Cart Sidebar -->
+      <aside class="w-full lg:w-[400px] bg-slate-900 border-t lg:border-t-0 lg:border-l border-slate-800 flex flex-col select-none h-auto lg:h-full">
+        <!-- Customer bar -->
+        <div class="p-3.5 border-b border-slate-800 bg-slate-950/60 flex items-center justify-between gap-2">
+          <div class="flex-1 flex items-center space-x-2 px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800 text-xs text-slate-300">
+            <i data-lucide="user" class="w-3.5 h-3.5 text-indigo-400"></i>
+            <input type="text" id="cart-customer-name" placeholder="Customer / Walk-in" class="bg-transparent border-none text-xs text-white focus:outline-none w-full">
+          </div>
+          <button onclick="clearCart()" class="p-2 rounded-xl border border-rose-500/30 text-rose-400 hover:bg-rose-500/20 text-xs" title="Clear Cart">
+            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+          </button>
+        </div>
+
+        <!-- Cart Items Scrollable List -->
+        <div id="cart-items-container" class="flex-1 overflow-y-auto p-3 space-y-2 min-h-[220px] max-h-[380px] lg:max-h-none">
+          <!-- Rendered via JS -->
+        </div>
+
+        <!-- Cart Summary Footer -->
+        <div class="p-4 border-t border-slate-800 bg-slate-950 space-y-3">
+          <div class="space-y-1.5 text-xs text-slate-400">
+            <div class="flex justify-between">
+              <span>Subtotal:</span>
+              <span id="cart-subtotal" class="font-mono text-slate-200 font-semibold">Rs. 0.00</span>
+            </div>
+            <div class="flex justify-between items-baseline pt-2 border-t border-slate-800 text-white">
+              <span className="text-sm font-bold">TOTAL PAYABLE:</span>
+              <span id="cart-grandtotal" class="text-2xl font-black font-mono text-emerald-400">Rs. 0.00</span>
+            </div>
+          </div>
+
+          <button onclick="openCheckoutModal()" id="btn-checkout" class="w-full py-3.5 rounded-2xl bg-gradient-to-r from-indigo-600 via-indigo-500 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-bold text-sm shadow-xl shadow-indigo-600/30 flex items-center justify-center space-x-2 transition-all active:scale-95 disabled:opacity-40">
+            <span>CHECKOUT & PRINT 80MM RECEIPT</span>
+            <i data-lucide="arrow-right" class="w-4 h-4"></i>
+          </button>
+        </div>
+      </aside>
+
+    </section>
+
+    <!-- ==================== VIEW 2: PHONE REPAIRS ==================== -->
+    <section id="view-repairs" class="view-panel hidden flex-1 p-4 sm:p-6 overflow-y-auto">
+      <div class="max-w-[1600px] mx-auto space-y-5">
+        
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-800">
+          <div>
+            <h1 class="text-2xl font-black text-white flex items-center space-x-2">
+              <i data-lucide="smartphone" class="w-7 h-7 text-indigo-400"></i>
+              <span>Mobile Phone Repair Service Center</span>
+            </h1>
+            <p class="text-xs text-slate-400 mt-1">Receive customer devices, record faults, print 80mm thermal chits, and settle balances.</p>
+          </div>
+
+          <button onclick="openNewRepairModal()" class="px-5 py-2.5 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-lg shadow-indigo-600/30 flex items-center space-x-2 self-start sm:self-auto">
+            <i data-lucide="plus" class="w-4 h-4"></i>
+            <span>+ Receive New Device / Job</span>
+          </button>
+        </div>
+
+        <!-- Filter & Search Bar -->
+        <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-slate-900/80 p-3 rounded-2xl border border-slate-800">
+          <div class="relative flex-1 max-w-md">
+            <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3.5 top-2.5"></i>
+            <input type="text" id="repair-search" oninput="renderRepairsList()" placeholder="Search by Job #, Name, Phone, IMEI, Model..." class="w-full bg-slate-950 border border-slate-800 rounded-xl pl-10 pr-3 py-1.5 text-xs text-white focus:outline-none focus:border-indigo-500">
+          </div>
+
+          <div id="repair-status-filters" class="flex flex-wrap items-center gap-1 bg-slate-950 p-1 rounded-xl border border-slate-800">
+            <!-- Rendered by JS -->
+          </div>
+        </div>
+
+        <!-- Repair Cards List -->
+        <div id="repairs-list-container" class="space-y-3">
+          <!-- Rendered via JS -->
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ==================== VIEW 3: UTILITY BILLS ==================== -->
+    <section id="view-bills" class="view-panel hidden flex-1 p-4 sm:p-6 overflow-y-auto">
+      <div class="max-w-[1600px] mx-auto space-y-6">
+        
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-800">
+          <div>
+            <h1 class="text-2xl font-black text-white flex items-center space-x-2">
+              <i data-lucide="receipt" class="w-7 h-7 text-emerald-400"></i>
+              <span>Utility Bill Payments Counter (බිල්පත් ගෙවීම්)</span>
+            </h1>
+            <p class="text-xs text-slate-400 mt-1">එකාබද්ද වලව මව් නදී, CEB, Water Board & Telecom with automated tiered commission fees.</p>
+          </div>
+
+          <div class="bg-slate-900 px-3.5 py-1.5 rounded-xl border border-slate-800 text-[11px] text-slate-300">
+            <span class="text-emerald-400 font-bold font-mono">&lt;5k: Rs.30</span> | 
+            <span class="text-emerald-400 font-bold font-mono">5k-15k: Rs.40</span> | 
+            <span class="text-emerald-400 font-bold font-mono">&gt;15k: Rs.50</span>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          
+          <!-- Left: Provider & Bill Form -->
+          <div class="lg:col-span-7 space-y-4">
+            <!-- Providers selection -->
+            <div class="bg-slate-900/90 border border-slate-800 rounded-3xl p-5 shadow-xl space-y-3">
+              <span class="text-xs font-bold text-slate-400 uppercase tracking-wider block">1. Select Bill Provider</span>
+              <div id="bill-providers-grid" class="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+                <!-- Rendered by JS -->
+              </div>
+            </div>
+
+            <!-- Form -->
+            <form onsubmit="addBillToBatch(event)" class="bg-slate-900/90 border border-slate-800 rounded-3xl p-5 shadow-xl space-y-4 text-xs">
+              <div class="flex items-center justify-between border-b border-slate-800 pb-2.5">
+                <span id="selected-provider-title" class="font-bold text-white text-sm">එකාබද්ද වලව මව් නදී</span>
+                <span id="bill-live-fee-pill" class="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 font-bold font-mono">Fee: Rs. 30</span>
+              </div>
+
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-slate-400 mb-1 font-semibold">Account Number (ගිණුම් අංකය) *</label>
+                  <input type="text" id="bill-acc-no" required placeholder="Enter Account Number" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white font-mono font-bold focus:outline-none focus:border-indigo-500">
+                </div>
+                <div>
+                  <label class="block text-slate-400 mb-1 font-semibold">Reference Number (යොමු අංකය)</label>
+                  <input type="text" id="bill-ref-no" placeholder="Enter Ref / Invoice No" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white font-mono focus:outline-none focus:border-indigo-500">
+                </div>
+              </div>
+
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div class="sm:col-span-2">
+                  <label class="block text-emerald-400 mb-1 font-bold">Bill Amount (බිල්පත් මුදල) *</label>
+                  <input type="number" id="bill-amount" oninput="updateLiveBillFee()" min="1" required placeholder="0.00" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2.5 text-xl font-black font-mono text-white focus:outline-none focus:border-emerald-500">
+                </div>
+                <div class="bg-slate-950 p-3 rounded-2xl border border-slate-800 flex flex-col justify-center">
+                  <span class="text-[10px] uppercase font-bold text-slate-400">Total Payable:</span>
+                  <span id="bill-item-total-preview" class="text-base font-black text-emerald-400 font-mono">Rs. 0.00</span>
+                </div>
+              </div>
+
+              <button type="submit" class="w-full py-3 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-lg shadow-indigo-600/30 flex items-center justify-center space-x-1.5 transition-all">
+                <i data-lucide="plus" class="w-4 h-4"></i>
+                <span>Add Bill to Batch Queue (එකවර බිල් කිහිපයක් එකතු කරන්න)</span>
+              </button>
+            </form>
+          </div>
+
+          <!-- Right: Batch Queue & Checkout -->
+          <div class="lg:col-span-5 space-y-4">
+            <div class="bg-slate-900/95 border border-slate-800 rounded-3xl p-5 shadow-2xl space-y-4">
+              <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                <h3 class="text-sm font-bold text-white flex items-center space-x-1.5">
+                  <i data-lucide="layers" class="w-4 h-4 text-indigo-400"></i>
+                  <span>Multi-Bill Queue (<span id="bill-batch-count">0</span>)</span>
+                </h3>
+                <button onclick="clearBillBatch()" class="text-xs text-rose-400 hover:underline">Clear All</button>
+              </div>
+
+              <!-- Batch Queue items -->
+              <div id="bill-batch-container" class="max-h-56 overflow-y-auto space-y-2 text-xs">
+                <!-- Rendered by JS -->
+              </div>
+
+              <!-- Calculations -->
+              <div class="bg-slate-950 p-4 rounded-2xl border border-slate-800 space-y-2 text-xs">
+                <div class="flex justify-between text-slate-400">
+                  <span>Bills Subtotal:</span>
+                  <span id="bill-subtotal-val" class="font-mono text-slate-200 font-semibold">Rs. 0.00</span>
+                </div>
+                <div class="flex justify-between text-indigo-400">
+                  <span>Total Service Commission:</span>
+                  <span id="bill-fees-val" class="font-mono font-semibold">+Rs. 0.00</span>
+                </div>
+                <div class="flex justify-between items-baseline pt-2 border-t border-slate-800 text-white">
+                  <span class="text-sm font-bold">TOTAL PAYABLE:</span>
+                  <span id="bill-grandtotal-val" class="text-2xl font-black font-mono text-emerald-400">Rs. 0.00</span>
+                </div>
+              </div>
+
+              <!-- Cash tendered -->
+              <div class="space-y-1.5 text-xs">
+                <label class="block text-slate-400 font-semibold">Cash Tendered (Rs.)</label>
+                <input type="number" id="bill-cash-tendered" oninput="calculateBillChange()" placeholder="0.00" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white font-mono text-lg font-bold focus:outline-none focus:border-indigo-500">
+                <div class="flex justify-between font-bold pt-1">
+                  <span class="text-slate-400">Change Due:</span>
+                  <span id="bill-change-due" class="text-emerald-400 font-mono">Rs. 0.00</span>
+                </div>
+              </div>
+
+              <button onclick="processBillPayment()" id="btn-pay-bills" class="w-full py-3.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-500 text-white font-bold text-sm shadow-xl shadow-emerald-600/30 flex items-center justify-center space-x-2 transition-all active:scale-95 disabled:opacity-40">
+                <i data-lucide="check-circle-2" class="w-5 h-5"></i>
+                <span>PAY BATCH & PRINT 80MM RECEIPT</span>
+              </button>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ==================== VIEW 4: DEBTORS BOOK ==================== -->
+    <section id="view-debtors" class="view-panel hidden flex-1 p-4 sm:p-6 overflow-y-auto">
+      <div class="max-w-[1600px] mx-auto space-y-6">
+        
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-800">
+          <div>
+            <h1 class="text-2xl font-black text-white flex items-center space-x-2">
+              <i data-lucide="book-open" class="w-7 h-7 text-amber-400"></i>
+              <span>Customer Debtors & Credit Book (ණය පොත)</span>
+            </h1>
+            <p class="text-xs text-slate-400 mt-1">Track credit customer accounts, record credit sales, and settle payments.</p>
+          </div>
+
+          <button onclick="openNewDebtorModal()" class="px-5 py-2.5 rounded-2xl bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs shadow-lg shadow-amber-600/30 flex items-center space-x-2 self-start sm:self-auto">
+            <i data-lucide="user-plus" class="w-4 h-4"></i>
+            <span>Add New Debtor Customer</span>
+          </button>
+        </div>
+
+        <!-- Debtors Layout -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          <!-- Left: Debtors list -->
+          <div class="lg:col-span-5 space-y-3">
+            <div class="bg-slate-900 p-3 rounded-2xl border border-slate-800">
+              <input type="text" id="debtors-search" oninput="renderDebtorsList()" placeholder="Search debtor by name, phone..." class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500">
+            </div>
+            <div id="debtors-list-container" class="space-y-2 max-h-[500px] overflow-y-auto">
+              <!-- Rendered by JS -->
+            </div>
+          </div>
+
+          <!-- Right: Selected Debtor Ledger -->
+          <div class="lg:col-span-7 space-y-4">
+            <div id="debtor-detail-card" class="bg-slate-900/90 border border-slate-800 rounded-3xl p-5 shadow-2xl space-y-4">
+              <!-- Rendered by JS -->
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ==================== VIEW 5: INVENTORY ==================== -->
+    <section id="view-products" class="view-panel hidden flex-1 p-4 sm:p-6 overflow-y-auto">
+      <div class="max-w-[1600px] mx-auto space-y-5">
+        <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+          <h1 class="text-2xl font-black text-white flex items-center space-x-2">
+            <i data-lucide="package" class="w-7 h-7 text-indigo-400"></i>
+            <span>Products & Inventory Management</span>
+          </h1>
+          <button onclick="openCustomItemModal()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl">
+            + Add New Product
+          </button>
+        </div>
+        <div id="inventory-table-container" class="bg-slate-900 rounded-3xl border border-slate-800 p-4 overflow-x-auto">
+          <!-- Rendered by JS -->
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== VIEW 6: ORDERS LOG ==================== -->
+    <section id="view-orders" class="view-panel hidden flex-1 p-4 sm:p-6 overflow-y-auto">
+      <div class="max-w-[1600px] mx-auto space-y-5">
+        <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+          <h1 class="text-2xl font-black text-white flex items-center space-x-2">
+            <i data-lucide="file-text" class="w-7 h-7 text-indigo-400"></i>
+            <span>Orders & Sales Transactions</span>
+          </h1>
+        </div>
+        <div id="orders-table-container" class="bg-slate-900 rounded-3xl border border-slate-800 p-4 overflow-x-auto">
+          <!-- Rendered by JS -->
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== VIEW 7: SETTINGS ==================== -->
+    <section id="view-settings" class="view-panel hidden flex-1 p-4 sm:p-6 overflow-y-auto">
+      <div class="max-w-3xl mx-auto space-y-6">
+        <h1 class="text-2xl font-black text-white flex items-center space-x-2 pb-3 border-b border-slate-800">
+          <i data-lucide="settings" class="w-7 h-7 text-indigo-400"></i>
+          <span>Store & 80mm Printer Settings</span>
+        </h1>
+
+        <form onsubmit="saveStoreSettings(event)" class="bg-slate-900 rounded-3xl border border-slate-800 p-6 space-y-4 text-xs shadow-xl">
+          <div>
+            <label class="block text-slate-300 font-semibold mb-1">Store / Business Name</label>
+            <input type="text" id="cfg-store-name" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white text-sm focus:outline-none focus:border-indigo-500">
+          </div>
+          <div>
+            <label class="block text-slate-300 font-semibold mb-1">Store Address (Printed on 80mm Chit)</label>
+            <input type="text" id="cfg-store-address" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-indigo-500">
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-slate-300 font-semibold mb-1">Hotline Phone</label>
+              <input type="text" id="cfg-store-phone" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-indigo-500">
+            </div>
+            <div>
+              <label class="block text-slate-300 font-semibold mb-1">Currency Symbol</label>
+              <input type="text" id="cfg-currency-symbol" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white font-mono focus:outline-none focus:border-indigo-500">
+            </div>
+          </div>
+          <div class="flex justify-end pt-2">
+            <button type="submit" class="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl">Save Settings</button>
+          </div>
+        </form>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ==================== MODALS & 80MM THERMAL RECEIPT PREVIEW ==================== -->
+
+  <!-- 1. NEW REPAIR MODAL -->
+  <div id="modal-new-repair" class="fixed inset-0 z-50 hidden flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md overflow-y-auto">
+    <div class="bg-slate-900 border border-slate-800 w-full max-w-2xl rounded-3xl shadow-2xl p-6 space-y-4 my-auto">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+        <h3 class="text-base font-bold text-white flex items-center space-x-2">
+          <i data-lucide="smartphone" class="w-5 h-5 text-indigo-400"></i>
+          <span>Receive Device / New Repair Job</span>
+        </h3>
+        <button onclick="closeNewRepairModal()" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+
+      <form onsubmit="saveNewRepairJob(event)" class="space-y-3 text-xs max-h-[70vh] overflow-y-auto pr-1">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-slate-300 font-semibold mb-1">Customer Name *</label>
+            <input type="text" id="rep-cust-name" required placeholder="e.g. Kamal Perera" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white">
+          </div>
+          <div>
+            <label class="block text-slate-300 font-semibold mb-1">Customer Phone *</label>
+            <input type="tel" id="rep-cust-phone" required placeholder="e.g. 077 123 4567" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div>
+            <label class="block text-slate-300 font-semibold mb-1">Brand *</label>
+            <select id="rep-brand" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white">
+              <option value="Samsung">Samsung</option>
+              <option value="Apple">Apple</option>
+              <option value="Xiaomi">Xiaomi</option>
+              <option value="Redmi">Redmi</option>
+              <option value="Vivo">Vivo</option>
+              <option value="Oppo">Oppo</option>
+              <option value="Huawei">Huawei</option>
+              <option value="Realme">Realme</option>
+              <option value="Nokia">Nokia</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-slate-300 font-semibold mb-1">Model Name *</label>
+            <input type="text" id="rep-model" required placeholder="e.g. Galaxy A14 / Note 11" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white">
+          </div>
+          <div>
+            <label class="block text-slate-300 mb-1">PIN / Pattern Lock</label>
+            <input type="text" id="rep-lock" placeholder="e.g. 1234 / Pattern Z" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-slate-300 font-semibold mb-1">Reported Faults & Problems *</label>
+          <input type="text" id="rep-faults" required placeholder="e.g. Display Broken, Charging Port Loose, Dead..." class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white">
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-slate-300 font-semibold mb-1">Estimated Cost (Rs.) *</label>
+            <input type="number" id="rep-cost" min="0" required placeholder="0.00" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white font-mono font-bold">
+          </div>
+          <div>
+            <label class="block text-slate-300 font-semibold mb-1">Advance Paid (Rs.)</label>
+            <input type="number" id="rep-advance" min="0" placeholder="0.00" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white font-mono font-bold">
+          </div>
+        </div>
+
+        <div class="flex justify-end space-x-2 pt-3">
+          <button type="button" onclick="closeNewRepairModal()" class="px-4 py-2 rounded-xl border border-slate-700 text-slate-300 font-semibold">Cancel</button>
+          <button type="submit" class="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold flex items-center space-x-1.5">
+            <i data-lucide="printer" class="w-4 h-4"></i>
+            <span>Save & Print 80mm Chit</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 2. PRINTABLE 80MM CHIT / RECEIPT MODAL -->
+  <div id="modal-print-preview" class="fixed inset-0 z-50 hidden flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md overflow-y-auto">
+    <div class="bg-slate-900 border border-slate-800 w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden flex flex-col my-auto max-h-[90vh]">
+      <div class="px-5 py-3.5 border-b border-slate-800 flex items-center justify-between no-print">
+        <h3 id="print-modal-title" class="text-sm font-bold text-white">80mm Receipt Preview</h3>
+        <button onclick="closePrintModal()" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+
+      <div class="p-6 overflow-y-auto flex justify-center bg-slate-950/60">
+        <!-- Physical 80mm Paper Container -->
+        <div id="printable-area" class="w-[340px] bg-white text-slate-900 p-5 rounded-xl font-mono text-xs shadow-2xl">
+          <!-- Rendered dynamically -->
+        </div>
+      </div>
+
+      <div class="px-5 py-3.5 border-t border-slate-800 bg-slate-950 flex items-center justify-between gap-2 no-print">
+        <button onclick="closePrintModal()" class="px-4 py-2 rounded-xl border border-slate-700 text-slate-300 text-xs font-semibold">Close</button>
+        <button onclick="window.print()" class="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs flex items-center space-x-1.5">
+          <i data-lucide="printer" class="w-4 h-4"></i>
+          <span>Print on 80mm Thermal Printer</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. CUSTOM ITEM MODAL -->
+  <div id="modal-custom-item" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+    <div class="bg-slate-900 border border-slate-800 w-full max-w-md rounded-3xl shadow-2xl p-6 space-y-4">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+        <h3 class="text-base font-bold text-white">+ Add Custom Item / Product</h3>
+        <button onclick="closeCustomItemModal()" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+      <form onsubmit="addCustomItemToCatalog(event)" class="space-y-3 text-xs">
+        <div>
+          <label class="block text-slate-300 font-semibold mb-1">Item Name *</label>
+          <input type="text" id="cust-item-name" required placeholder="e.g. Phone Tempered Glass" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white">
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-slate-300 font-semibold mb-1">Selling Price (Rs.) *</label>
+            <input type="number" id="cust-item-price" min="0" required placeholder="0.00" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white font-mono">
+          </div>
+          <div>
+            <label class="block text-slate-300 font-semibold mb-1">Stock Quantity</label>
+            <input type="number" id="cust-item-stock" min="1" value="20" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white font-mono">
+          </div>
+        </div>
+        <div class="flex justify-end space-x-2 pt-2">
+          <button type="button" onclick="closeCustomItemModal()" class="px-4 py-2 rounded-xl border border-slate-700 text-slate-300">Cancel</button>
+          <button type="submit" class="px-5 py-2 rounded-xl bg-indigo-600 text-white font-bold">Add Item</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 4. NEW DEBTOR MODAL -->
+  <div id="modal-new-debtor" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+    <div class="bg-slate-900 border border-slate-800 w-full max-w-md rounded-3xl shadow-2xl p-6 space-y-4">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+        <h3 class="text-base font-bold text-white flex items-center space-x-2">
+          <i data-lucide="user-plus" class="w-5 h-5 text-amber-400"></i>
+          <span>Add New Debtor Customer (ණය ගැතියා)</span>
+        </h3>
+        <button onclick="closeNewDebtorModal()" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+      <form onsubmit="saveNewDebtor(event)" class="space-y-3 text-xs">
+        <div>
+          <label class="block text-slate-300 font-semibold mb-1">Customer Full Name *</label>
+          <input type="text" id="deb-name" required placeholder="e.g. Sunil Perera" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white">
+        </div>
+        <div>
+          <label class="block text-slate-300 font-semibold mb-1">Phone Number *</label>
+          <input type="tel" id="deb-phone" required placeholder="e.g. 077 123 4567" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white">
+        </div>
+        <div>
+          <label class="block text-slate-300 mb-1">Address / Note</label>
+          <input type="text" id="deb-address" placeholder="e.g. Padalangala / Walawe" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white">
+        </div>
+        <div class="flex justify-end space-x-2 pt-2">
+          <button type="button" onclick="closeNewDebtorModal()" class="px-4 py-2 rounded-xl border border-slate-700 text-slate-300">Cancel</button>
+          <button type="submit" class="px-5 py-2 rounded-xl bg-amber-600 text-white font-bold">Create Debtor Profile</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- JAVASCRIPT APPLICATION LOGIC -->
+  <script>
+    // State Data Storage
+    const DEFAULT_STORE_SETTINGS = {
+      store_name: 'Apex Communication & Mobile Care',
+      store_address: 'Main Street, Junction, Sri Lanka',
+      store_phone: '+94 77 123 4567 / +94 47 222 3456',
+      currency_symbol: 'Rs. '
+    };
+
+    const SEED_CATEGORIES = [
+      { id: 'all', name: 'All Items' },
+      { id: 'cat-1', name: 'Phone Accessories' },
+      { id: 'cat-2', name: 'Repair Parts & Services' },
+      { id: 'cat-3', name: 'Reloads & Cards' },
+      { id: 'cat-4', name: 'Printing & Stationery' },
+      { id: 'cat-5', name: 'Audio & Bluetooth' },
+    ];
+
+    const SEED_PRODUCTS = [
+      { id: 'prod-1', name: '9D Full Cover Tempered Glass', price: 650, category_id: 'cat-1', stock: 65, icon: 'shield' },
+      { id: 'prod-2', name: 'Fast Charging USB-C Cable (60W)', price: 850, category_id: 'cat-1', stock: 40, icon: 'zap' },
+      { id: 'prod-3', name: '20W PD Fast Charger Adapter', price: 1650, category_id: 'cat-1', stock: 25, icon: 'battery-charging' },
+      { id: 'prod-4', name: 'Silicone Shockproof Phone Cover', price: 950, category_id: 'cat-1', stock: 50, icon: 'smartphone' },
+      { id: 'prod-5', name: 'Original LCD Display Replacement', price: 6500, category_id: 'cat-2', stock: 8, icon: 'tv' },
+      { id: 'prod-6', name: 'Battery Replacement (5000mAh)', price: 3200, category_id: 'cat-2', stock: 12, icon: 'battery' },
+      { id: 'prod-7', name: 'Charging Port Replacement Service', price: 1800, category_id: 'cat-2', stock: 20, icon: 'wrench' },
+      { id: 'prod-8', name: 'Dialog Reload Card Rs. 100', price: 100, category_id: 'cat-3', stock: 100, icon: 'credit-card' },
+      { id: 'prod-9', name: 'Mobitel Reload Card Rs. 200', price: 200, category_id: 'cat-3', stock: 80, icon: 'credit-card' },
+      { id: 'prod-10', name: 'Photocopy (B/W Single Side)', price: 15, category_id: 'cat-4', stock: 500, icon: 'printer' },
+      { id: 'prod-11', name: 'Color Laser Printout (A4)', price: 60, category_id: 'cat-4', stock: 300, icon: 'printer' },
+      { id: 'prod-12', name: 'A4 Document Lamination', price: 150, category_id: 'cat-4', stock: 120, icon: 'file-check' },
+      { id: 'prod-13', name: 'TWS Wireless Bluetooth Earbuds', price: 2850, category_id: 'cat-5', stock: 18, icon: 'headphones' },
+      { id: 'prod-14', name: '3.5mm Stereo Handsfree Headset', price: 650, category_id: 'cat-5', stock: 35, icon: 'headphones' },
+    ];
+
+    const BILL_PROVIDERS = [
+      { id: 'walawe', name: 'එකාබද්ද වලව මව් නදී', cat: 'Irrigation & Water', color: 'border-emerald-500 bg-emerald-950/40 text-emerald-300' },
+      { id: 'ceb', name: 'Ceylon Electricity Board (CEB)', cat: 'Electricity / විදුලිබල', color: 'border-amber-500 bg-amber-950/40 text-amber-300' },
+      { id: 'water', name: 'National Water Board', cat: 'Water / ජල සම්පාදන', color: 'border-blue-500 bg-blue-950/40 text-blue-300' },
+      { id: 'mobitel', name: 'Mobitel (Postpaid / Reload)', cat: 'Telecom', color: 'border-teal-500 bg-teal-950/40 text-teal-300' },
+      { id: 'dialog', name: 'Dialog Axiata (Mobile/DTV/HBB)', cat: 'Telecom & TV', color: 'border-rose-500 bg-rose-950/40 text-rose-300' },
+      { id: 'slt', name: 'Sri Lanka Telecom (Fiber/Megaline)', cat: 'Broadband & Phone', color: 'border-indigo-500 bg-indigo-950/40 text-indigo-300' },
+    ];
+
+    // Load from LocalStorage
+    let storeSettings = JSON.parse(localStorage.getItem('apex_settings')) || DEFAULT_STORE_SETTINGS;
+    let products = JSON.parse(localStorage.getItem('apex_products')) || SEED_PRODUCTS;
+    let repairs = JSON.parse(localStorage.getItem('apex_repairs')) || [
+      {
+        id: 'rep-1',
+        job_number: 'REP-2026-0001',
+        customer_name: 'Kamal Perera',
+        customer_phone: '077 444 8899',
+        device_brand: 'Samsung',
+        device_model: 'Galaxy A14',
+        passcode_lock: '1234',
+        fault_description: 'Display cracked and touch not responding',
+        estimated_cost: 8500,
+        advance_paid: 3000,
+        balance_due: 5500,
+        status: 'in_progress',
+        created_at: new Date(Date.now() - 3600000 * 24).toISOString()
+      },
+      {
+        id: 'rep-2',
+        job_number: 'REP-2026-0002',
+        customer_name: 'Dinesh Kumara',
+        customer_phone: '071 333 7711',
+        device_brand: 'Xiaomi',
+        device_model: 'Redmi Note 11',
+        passcode_lock: 'Pattern Z',
+        fault_description: 'Not charging / Loose Type-C charging port',
+        estimated_cost: 2200,
+        advance_paid: 1000,
+        balance_due: 1200,
+        status: 'ready',
+        created_at: new Date(Date.now() - 3600000 * 48).toISOString()
+      }
+    ];
+    let debtors = JSON.parse(localStorage.getItem('apex_debtors')) || [
+      { id: 'deb-1', name: 'Saman Silva', phone: '077 888 1234', address: 'No 45, Station Road, Embilipitiya', current_balance: 4500 },
+      { id: 'deb-2', name: 'Chandana Jayalath', phone: '071 222 9900', address: 'Walawe Farm, Padalangala', current_balance: 8200 }
+    ];
+    let debtorTransactions = JSON.parse(localStorage.getItem('apex_debtor_txs')) || [
+      { id: 'dtx-1', debtor_id: 'deb-1', type: 'credit_add', amount: 4500, description: 'Tempered glass, Cable & Photocopy', created_at: new Date().toISOString() },
+      { id: 'dtx-2', debtor_id: 'deb-2', type: 'credit_add', amount: 8200, description: 'එකාබද්ද වලව මව් නදී Water Bill on credit', created_at: new Date().toISOString() }
+    ];
+    let orders = JSON.parse(localStorage.getItem('apex_orders')) || [];
+
+    // Runtime state
+    let selectedCat = 'all';
+    let cart = [];
+    let selectedRepairStatus = 'all';
+    let selectedBillProvider = BILL_PROVIDERS[0];
+    let billBatch = [];
+    let selectedDebtor = debtors[0] || null;
+
+    // Helper: Format Currency
+    function formatRs(amount) {
+      return (storeSettings.currency_symbol || 'Rs. ') + Number(amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    // Helper: Calculate Tiered Service Fee
+    function calculateServiceFee(amount) {
+      const num = Number(amount) || 0;
+      if (num <= 0) return 0;
+      if (num < 5000) return 30;
+      if (num <= 15000) return 40;
+      return 50;
+    }
+
+    // Switch View Panel
+    function switchTab(tabId) {
+      document.querySelectorAll('.view-panel').forEach(p => p.classList.add('hidden'));
+      document.querySelectorAll('.nav-btn').forEach(b => {
+        b.classList.remove('bg-indigo-600', 'text-white', 'shadow-md');
+        b.classList.add('text-slate-400');
+      });
+
+      const panel = document.getElementById('view-' + tabId);
+      if (panel) panel.classList.remove('hidden');
+
+      const btn = document.getElementById('tab-' + tabId);
+      if (btn) {
+        btn.classList.add('bg-indigo-600', 'text-white', 'shadow-md');
+        btn.classList.remove('text-slate-400');
+      }
+
+      if (tabId === 'repairs') renderRepairsList();
+      if (tabId === 'bills') renderBillsView();
+      if (tabId === 'debtors') renderDebtorsList();
+      if (tabId === 'products') renderInventoryTable();
+      if (tabId === 'orders') renderOrdersTable();
+      if (tabId === 'settings') loadSettingsForm();
+      
+      lucide.createIcons();
+    }
+
+    // ==================== 1. POS REGISTER LOGIC ====================
+    function renderCategoryPills() {
+      const container = document.getElementById('category-pills');
+      if (!container) return;
+      container.innerHTML = SEED_CATEGORIES.map(c => `
+        <button onclick="setCategory('${c.id}')" class="px-3 py-1.5 rounded-xl font-semibold transition-all whitespace-nowrap ${selectedCat === c.id ? 'bg-indigo-600 text-white shadow' : 'bg-slate-950 text-slate-400 hover:text-slate-200 border border-slate-800'}">
+          ${c.name}
+        </button>
+      `).join('');
+    }
+
+    function setCategory(catId) {
+      selectedCat = catId;
+      renderCategoryPills();
+      renderProductCatalog();
+    }
+
+    function renderProductCatalog() {
+      const query = (document.getElementById('pos-search')?.value || '').toLowerCase();
+      const grid = document.getElementById('products-grid');
+      if (!grid) return;
+
+      const filtered = products.filter(p => {
+        const matchesCat = selectedCat === 'all' || p.category_id === selectedCat;
+        const matchesSearch = !query || p.name.toLowerCase().includes(query);
+        return matchesCat && matchesSearch;
+      });
+
+      if (filtered.length === 0) {
+        grid.innerHTML = `<div class="col-span-full py-12 text-center text-slate-500 text-xs">No products found matching query.</div>`;
+        return;
+      }
+
+      grid.innerHTML = filtered.map(p => `
+        <div onclick="addToCart('${p.id}')" class="bg-slate-900 border border-slate-800 hover:border-indigo-500/80 p-3.5 rounded-2xl cursor-pointer transition-all hover:scale-[1.02] shadow-lg flex flex-col justify-between group">
+          <div>
+            <div class="flex items-start justify-between mb-2">
+              <div class="w-8 h-8 rounded-xl bg-slate-800 text-indigo-400 flex items-center justify-center">
+                <i data-lucide="${p.icon || 'tag'}" class="w-4 h-4"></i>
+              </div>
+              <span class="text-[10px] px-2 py-0.5 rounded-full ${p.stock > 10 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-amber-500/10 text-amber-400'} font-semibold">
+                Stock: ${p.stock}
+              </span>
+            </div>
+            <h4 class="text-xs font-bold text-white group-hover:text-indigo-300 transition-colors line-clamp-2 leading-snug">
+              ${p.name}
+            </h4>
+          </div>
+          <div class="mt-3 flex items-center justify-between pt-2 border-t border-slate-800/80">
+            <span class="text-sm font-black font-mono text-emerald-400">${formatRs(p.price)}</span>
+            <span class="w-6 h-6 rounded-lg bg-indigo-600/20 text-indigo-400 group-hover:bg-indigo-600 group-hover:text-white flex items-center justify-center text-xs transition-colors">
+              +
+            </span>
+          </div>
+        </div>
+      `).join('');
+
+      lucide.createIcons();
+    }
+
+    function addToCart(productId) {
+      const prod = products.find(p => p.id === productId);
+      if (!prod) return;
+
+      const existing = cart.find(c => c.product_id === prod.id);
+      if (existing) {
+        existing.quantity += 1;
+      } else {
+        cart.push({
+          product_id: prod.id,
+          name: prod.name,
+          price: prod.price,
+          quantity: 1
+        });
+      }
+      renderCart();
+    }
+
+    function updateCartQty(idx, qty) {
+      if (qty <= 0) {
+        cart.splice(idx, 1);
+      } else {
+        cart[idx].quantity = qty;
+      }
+      renderCart();
+    }
+
+    function clearCart() {
+      cart = [];
+      renderCart();
+    }
+
+    function renderCart() {
+      const container = document.getElementById('cart-items-container');
+      const totalItems = cart.reduce((sum, i) => sum + i.quantity, 0);
+      const subtotal = cart.reduce((sum, i) => sum + (i.price * i.quantity), 0);
+
+      document.getElementById('cart-subtotal').innerText = formatRs(subtotal);
+      document.getElementById('cart-grandtotal').innerText = formatRs(subtotal);
+      document.getElementById('btn-checkout').disabled = cart.length === 0;
+
+      if (cart.length === 0) {
+        container.innerHTML = `
+          <div class="h-full flex flex-col items-center justify-center text-center p-6 text-slate-500">
+            <i data-lucide="shopping-cart" class="w-10 h-10 text-slate-700 mb-2"></i>
+            <p class="font-bold text-slate-400 text-xs">Cart is currently empty</p>
+            <p class="text-[11px] text-slate-600 mt-0.5">Click items to begin billing.</p>
+          </div>
+        `;
+        lucide.createIcons();
+        return;
+      }
+
+      container.innerHTML = cart.map((item, idx) => `
+        <div class="bg-slate-950 p-2.5 rounded-xl border border-slate-800 flex items-center justify-between gap-2 text-xs">
+          <div class="flex-1 min-w-0">
+            <h4 class="font-bold text-white truncate">${item.name}</h4>
+            <span class="text-[11px] text-emerald-400 font-mono">${formatRs(item.price)}</span>
+          </div>
+          <div class="flex items-center space-x-1.5 bg-slate-900 border border-slate-800 rounded-lg p-0.5">
+            <button onclick="updateCartQty(${idx}, ${item.quantity - 1})" class="w-5 h-5 rounded hover:bg-slate-800 text-slate-300">-</button>
+            <span class="w-5 text-center font-bold font-mono text-white">${item.quantity}</span>
+            <button onclick="updateCartQty(${idx}, ${item.quantity + 1})" class="w-5 h-5 rounded hover:bg-slate-800 text-slate-300">+</button>
+          </div>
+          <span class="font-mono font-bold text-white min-w-[60px] text-right">${formatRs(item.price * item.quantity)}</span>
+        </div>
+      `).join('');
+
+      lucide.createIcons();
+    }
+
+    function openCheckoutModal() {
+      if (cart.length === 0) return;
+      const subtotal = cart.reduce((sum, i) => sum + (i.price * i.quantity), 0);
+      const custName = document.getElementById('cart-customer-name')?.value || 'Walk-in Customer';
+      const invoiceNo = 'INV-' + Math.floor(100000 + Math.random() * 900000);
+
+      const orderObj = {
+        invoice_number: invoiceNo,
+        customer_name: custName,
+        total: subtotal,
+        items: [...cart],
+        created_at: new Date().toISOString()
+      };
+      orders.unshift(orderObj);
+      localStorage.setItem('apex_orders', JSON.stringify(orders));
+
+      // Build 80mm Receipt Content
+      const receiptHTML = `
+        <div class="text-center space-y-1 pb-3 border-b-2 border-dashed border-slate-300">
+          <h1 class="font-extrabold text-base uppercase">${storeSettings.store_name}</h1>
+          <p class="text-[10px] text-slate-600">${storeSettings.store_address}</p>
+          <p class="text-[10px] text-slate-700 font-semibold">Hotline: ${storeSettings.store_phone}</p>
+          <div class="inline-block px-2 py-0.5 mt-1 bg-black text-white text-[10px] font-bold rounded">SALES RECEIPT</div>
+        </div>
+
+        <div class="py-2 space-y-1 border-b border-dashed border-slate-300 text-[10px]">
+          <div class="flex justify-between"><span>Invoice:</span><span class="font-bold">${invoiceNo}</span></div>
+          <div class="flex justify-between"><span>Date:</span><span>${new Date().toLocaleString()}</span></div>
+          <div class="flex justify-between"><span>Customer:</span><span class="font-bold">${custName}</span></div>
+        </div>
+
+        <div class="py-2 border-b-2 border-dashed border-slate-300 space-y-1 text-[10px]">
+          <div class="flex justify-between font-bold border-b border-slate-200 pb-1">
+            <span>ITEM</span><span>QTY x PRICE</span><span>TOTAL</span>
+          </div>
+          ${cart.map(i => `
+            <div class="flex justify-between pt-1">
+              <span class="truncate max-w-[140px]">${i.name}</span>
+              <span>${i.quantity}x</span>
+              <span class="font-bold">${formatRs(i.price * i.quantity)}</span>
+            </div>
+          `).join('')}
+        </div>
+
+        <div class="py-2.5 space-y-1 border-b-2 border-dashed border-slate-300 text-xs">
+          <div class="flex justify-between font-black text-sm pt-1">
+            <span>TOTAL:</span>
+            <span>${formatRs(subtotal)}</span>
+          </div>
+          <div class="flex justify-between text-[10px] text-slate-600">
+            <span>Paid (CASH):</span><span>${formatRs(subtotal)}</span>
+          </div>
+        </div>
+
+        <div class="pt-3 text-center space-y-1 text-[9px] text-slate-500">
+          <p>Goods once sold are non-returnable.</p>
+          <p class="font-bold text-slate-800">*** THANK YOU COME AGAIN ***</p>
+        </div>
+      `;
+
+      showPrintModal('80mm Sales Receipt', receiptHTML);
+      clearCart();
+      confetti({ particleCount: 60, spread: 60 });
+    }
+
+    // ==================== 2. PHONE REPAIR LOGIC ====================
+    function renderRepairsList() {
+      const container = document.getElementById('repairs-list-container');
+      const query = (document.getElementById('repair-search')?.value || '').toLowerCase();
+      
+      const filtered = repairs.filter(r => {
+        const matchesStatus = selectedRepairStatus === 'all' || r.status === selectedRepairStatus;
+        const s = query;
+        const matchesSearch = !s || r.job_number.toLowerCase().includes(s) || r.customer_name.toLowerCase().includes(s) || r.customer_phone.includes(s) || r.device_model.toLowerCase().includes(s);
+        return matchesStatus && matchesSearch;
+      });
+
+      // Update badge
+      const activeCount = repairs.filter(r => r.status !== 'delivered' && r.status !== 'cancelled').length;
+      document.getElementById('badge-active-repairs').innerText = activeCount;
+      document.getElementById('pos-repairs-badge').innerText = activeCount + ' Active Jobs';
+
+      // Render filter tabs
+      const filters = [
+        { id: 'all', label: 'All' },
+        { id: 'received', label: 'Received' },
+        { id: 'in_progress', label: 'In Progress' },
+        { id: 'ready', label: 'Ready for Pickup' },
+        { id: 'delivered', label: 'Delivered' }
+      ];
+      document.getElementById('repair-status-filters').innerHTML = filters.map(f => `
+        <button onclick="setRepairFilter('${f.id}')" class="px-3 py-1 rounded-lg text-xs font-semibold ${selectedRepairStatus === f.id ? 'bg-indigo-600 text-white shadow' : 'text-slate-400 hover:text-white'}">
+          ${f.label}
+        </button>
+      `).join('');
+
+      if (filtered.length === 0) {
+        container.innerHTML = `<div class="p-10 text-center text-slate-500 text-xs">No repair jobs found matching criteria.</div>`;
+        return;
+      }
+
+      container.innerHTML = filtered.map((job, idx) => `
+        <div class="bg-slate-900 border border-slate-800 p-4 rounded-2xl space-y-3 shadow-lg">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div class="flex items-center space-x-2.5">
+              <span class="px-2.5 py-0.5 bg-indigo-950 border border-indigo-500/40 text-indigo-300 font-mono font-bold text-xs rounded-lg">${job.job_number}</span>
+              <span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold ${job.status === 'ready' ? 'bg-emerald-500/20 text-emerald-400' : job.status === 'delivered' ? 'bg-slate-800 text-slate-400' : 'bg-amber-500/20 text-amber-300'}">
+                ${job.status.toUpperCase()}
+              </span>
+            </div>
+            <span class="text-xs text-slate-400 font-mono">${new Date(job.created_at).toLocaleDateString()}</span>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs pt-1 border-t border-slate-800">
+            <div>
+              <span class="text-[10px] text-slate-400 font-bold uppercase">Customer</span>
+              <h4 class="font-bold text-white">${job.customer_name}</h4>
+              <p class="text-slate-300 font-mono">${job.customer_phone}</p>
+            </div>
+            <div>
+              <span class="text-[10px] text-slate-400 font-bold uppercase">Device & Faults</span>
+              <h4 class="font-bold text-slate-200">${job.device_brand} ${job.device_model}</h4>
+              <p class="text-slate-400 truncate">${job.fault_description}</p>
+            </div>
+            <div class="bg-slate-950 p-2.5 rounded-xl border border-slate-800 space-y-0.5">
+              <div class="flex justify-between text-slate-400 text-[11px]"><span>Est. Cost:</span><span>${formatRs(job.estimated_cost)}</span></div>
+              <div class="flex justify-between text-emerald-400 text-[11px]"><span>Advance:</span><span>${formatRs(job.advance_paid)}</span></div>
+              <div class="flex justify-between font-bold text-amber-400 text-xs pt-1 border-t border-slate-800">
+                <span>Balance:</span><span>${job.balance_due > 0 ? formatRs(job.balance_due) : 'Settled'}</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between pt-2 border-t border-slate-800/80">
+            <div class="flex items-center space-x-2 text-xs">
+              <span class="text-slate-400">Status:</span>
+              <select onchange="updateRepairStatus('${job.id}', this.value)" class="bg-slate-950 border border-slate-700 text-xs text-white rounded-lg px-2 py-1">
+                <option value="received" ${job.status === 'received' ? 'selected' : ''}>Received</option>
+                <option value="in_progress" ${job.status === 'in_progress' ? 'selected' : ''}>In Progress</option>
+                <option value="ready" ${job.status === 'ready' ? 'selected' : ''}>Ready for Pickup</option>
+                <option value="delivered" ${job.status === 'delivered' ? 'selected' : ''}>Delivered / Settled</option>
+              </select>
+            </div>
+
+            <div class="flex items-center space-x-2">
+              <button onclick="printRepairChit('${job.id}')" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-semibold flex items-center space-x-1 border border-slate-700">
+                <i data-lucide="printer" class="w-3.5 h-3.5 text-indigo-400"></i>
+                <span>Print 80mm Chit</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      `).join('');
+
+      lucide.createIcons();
+    }
+
+    function setRepairFilter(status) {
+      selectedRepairStatus = status;
+      renderRepairsList();
+    }
+
+    function updateRepairStatus(jobId, status) {
+      const job = repairs.find(r => r.id === jobId);
+      if (job) {
+        job.status = status;
+        if (status === 'delivered') job.balance_due = 0;
+        localStorage.setItem('apex_repairs', JSON.stringify(repairs));
+        renderRepairsList();
+      }
+    }
+
+    function openNewRepairModal() {
+      document.getElementById('modal-new-repair').classList.remove('hidden');
+    }
+    function closeNewRepairModal() {
+      document.getElementById('modal-new-repair').classList.add('hidden');
+    }
+
+    function saveNewRepairJob(e) {
+      e.preventDefault();
+      const custName = document.getElementById('rep-cust-name').value.trim();
+      const custPhone = document.getElementById('rep-cust-phone').value.trim();
+      const brand = document.getElementById('rep-brand').value;
+      const model = document.getElementById('rep-model').value.trim();
+      const lock = document.getElementById('rep-lock').value.trim();
+      const faults = document.getElementById('rep-faults').value.trim();
+      const cost = Number(document.getElementById('rep-cost').value) || 0;
+      const advance = Number(document.getElementById('rep-advance').value) || 0;
+      const balance = Math.max(0, cost - advance);
+
+      const jobNumber = 'REP-2026-' + String(repairs.length + 1).padStart(4, '0');
+
+      const newJob = {
+        id: 'rep-' + Date.now(),
+        job_number: jobNumber,
+        customer_name: custName,
+        customer_phone: custPhone,
+        device_brand: brand,
+        device_model: model,
+        passcode_lock: lock,
+        fault_description: faults,
+        estimated_cost: cost,
+        advance_paid: advance,
+        balance_due: balance,
+        status: 'received',
+        created_at: new Date().toISOString()
+      };
+
+      repairs.unshift(newJob);
+      localStorage.setItem('apex_repairs', JSON.stringify(repairs));
+
+      closeNewRepairModal();
+      printRepairChit(newJob.id);
+      renderRepairsList();
+    }
+
+    function printRepairChit(jobId) {
+      const job = repairs.find(r => r.id === jobId);
+      if (!job) return;
+
+      const chitHTML = `
+        <div class="text-center space-y-1 pb-3 border-b-2 border-dashed border-slate-300">
+          <h1 class="font-extrabold text-base uppercase">${storeSettings.store_name}</h1>
+          <p class="text-[10px] text-slate-600">${storeSettings.store_address}</p>
+          <p class="text-[10px] text-slate-700 font-semibold">Hotline: ${storeSettings.store_phone}</p>
+          <div class="inline-block px-2.5 py-0.5 mt-1 bg-black text-white text-[10px] font-bold rounded">REPAIR JOB CHIT</div>
+        </div>
+
+        <div class="py-2 space-y-1 border-b border-dashed border-slate-300 text-[10px]">
+          <div class="flex justify-between font-bold"><span>JOB NO:</span><span>${job.job_number}</span></div>
+          <div class="flex justify-between"><span>Date:</span><span>${new Date(job.created_at).toLocaleString()}</span></div>
+          <div class="flex justify-between font-semibold"><span>Customer:</span><span>${job.customer_name}</span></div>
+          <div class="flex justify-between font-semibold"><span>Phone:</span><span>${job.customer_phone}</span></div>
+        </div>
+
+        <div class="py-2 space-y-1 border-b border-dashed border-slate-300 text-[10px]">
+          <div class="flex justify-between font-bold"><span>Device:</span><span>${job.device_brand} ${job.device_model}</span></div>
+          ${job.passcode_lock ? `<div class="flex justify-between"><span>Lock PIN:</span><span>${job.passcode_lock}</span></div>` : ''}
+          <div class="pt-1"><span class="font-bold block">Faults Reported:</span><p class="text-slate-700 bg-slate-100 p-1 rounded mt-0.5">${job.fault_description}</p></div>
+        </div>
+
+        <div class="py-2.5 space-y-1 border-b-2 border-dashed border-slate-300 text-xs">
+          <div class="flex justify-between text-[10px] text-slate-600"><span>Est. Cost:</span><span>${formatRs(job.estimated_cost)}</span></div>
+          <div class="flex justify-between text-[10px] text-emerald-700 font-semibold"><span>Advance Paid:</span><span>${formatRs(job.advance_paid)}</span></div>
+          <div class="flex justify-between text-sm font-black text-slate-950 pt-1 border-t border-slate-200">
+            <span>BALANCE DUE:</span><span class="text-rose-700">${formatRs(job.balance_due)}</span>
+          </div>
+        </div>
+
+        <div class="py-2 text-[8px] text-slate-600 space-y-0.5 border-b border-dashed border-slate-300">
+          <p class="font-bold">TERMS & CONDITIONS:</p>
+          <p>1. Present this chit when collecting your device.</p>
+          <p>2. We are not liable for data loss. Please back up.</p>
+          <p>3. Claim device within 30 days of completion.</p>
+        </div>
+
+        <div class="pt-4 grid grid-cols-2 gap-4 text-[9px] text-center">
+          <div><div class="border-b border-slate-400 mb-1 h-5"></div><span>Customer Sign</span></div>
+          <div><div class="border-b border-slate-400 mb-1 h-5"></div><span>Cashier / Shop</span></div>
+        </div>
+      `;
+
+      showPrintModal('80mm Repair Job Chit', chitHTML);
+    }
+
+    // ==================== 3. UTILITY BILLS LOGIC ====================
+    function renderBillsView() {
+      const grid = document.getElementById('bill-providers-grid');
+      grid.innerHTML = BILL_PROVIDERS.map(p => `
+        <button type="button" onclick="selectBillProvider('${p.id}')" class="p-3 rounded-2xl border text-left flex flex-col justify-between transition-all ${selectedBillProvider.id === p.id ? p.color + ' ring-2 ring-emerald-400 scale-[1.02]' : 'bg-slate-950 border-slate-800 text-slate-300 hover:bg-slate-900'}">
+          <span class="text-xs font-bold leading-tight truncate">${p.name}</span>
+          <span class="text-[10px] text-slate-400 mt-1">${p.cat}</span>
+        </button>
+      `).join('');
+
+      document.getElementById('selected-provider-title').innerText = selectedBillProvider.name;
+      updateLiveBillFee();
+      renderBillBatch();
+    }
+
+    function selectBillProvider(id) {
+      selectedBillProvider = BILL_PROVIDERS.find(p => p.id === id) || BILL_PROVIDERS[0];
+      renderBillsView();
+    }
+
+    function updateLiveBillFee() {
+      const amount = Number(document.getElementById('bill-amount')?.value) || 0;
+      const fee = calculateServiceFee(amount);
+      const total = amount + fee;
+
+      document.getElementById('bill-live-fee-pill').innerText = 'Fee: ' + formatRs(fee);
+      document.getElementById('bill-item-total-preview').innerText = formatRs(total);
+    }
+
+    function addBillToBatch(e) {
+      e.preventDefault();
+      const acc = document.getElementById('bill-acc-no').value.trim();
+      const ref = document.getElementById('bill-ref-no').value.trim() || 'N/A';
+      const amount = Number(document.getElementById('bill-amount').value) || 0;
+      if (amount <= 0) return;
+
+      const fee = calculateServiceFee(amount);
+
+      billBatch.push({
+        id: 'bill-' + Date.now(),
+        provider_name: selectedBillProvider.name,
+        account_number: acc,
+        reference_number: ref,
+        bill_amount: amount,
+        service_charge: fee,
+        total_payable: amount + fee
+      });
+
+      document.getElementById('bill-acc-no').value = '';
+      document.getElementById('bill-ref-no').value = '';
+      document.getElementById('bill-amount').value = '';
+      updateLiveBillFee();
+      renderBillBatch();
+    }
+
+    function removeBillFromBatch(idx) {
+      billBatch.splice(idx, 1);
+      renderBillBatch();
+    }
+
+    function clearBillBatch() {
+      billBatch = [];
+      renderBillBatch();
+    }
+
+    function renderBillBatch() {
+      const container = document.getElementById('bill-batch-container');
+      const countEl = document.getElementById('bill-batch-count');
+      const subtotalEl = document.getElementById('bill-subtotal-val');
+      const feesEl = document.getElementById('bill-fees-val');
+      const grandtotalEl = document.getElementById('bill-grandtotal-val');
+      const btnPay = document.getElementById('btn-pay-bills');
+
+      countEl.innerText = billBatch.length;
+      btnPay.disabled = billBatch.length === 0;
+
+      const subtotal = billBatch.reduce((sum, b) => sum + b.bill_amount, 0);
+      const fees = billBatch.reduce((sum, b) => sum + b.service_charge, 0);
+      const grand = subtotal + fees;
+
+      subtotalEl.innerText = formatRs(subtotal);
+      feesEl.innerText = '+' + formatRs(fees);
+      grandtotalEl.innerText = formatRs(grand);
+
+      if (billBatch.length === 0) {
+        container.innerHTML = `<div class="p-6 text-center text-slate-500 text-xs border border-dashed border-slate-800 rounded-2xl">No bills in queue. Add bills on left.</div>`;
+        return;
+      }
+
+      container.innerHTML = billBatch.map((b, idx) => `
+        <div class="bg-slate-950 p-2.5 rounded-xl border border-slate-800 flex items-center justify-between gap-2">
+          <div class="flex-1 min-w-0">
+            <h4 class="font-bold text-white truncate">${b.provider_name}</h4>
+            <p class="text-[11px] text-slate-400 font-mono">Acc: ${b.account_number} ${b.reference_number !== 'N/A' ? '| Ref: ' + b.reference_number : ''}</p>
+            <p class="text-[10px] text-slate-500">Bill: ${formatRs(b.bill_amount)} + Fee: ${formatRs(b.service_charge)}</p>
+          </div>
+          <div class="text-right">
+            <span class="font-mono font-bold text-emerald-400 block">${formatRs(b.total_payable)}</span>
+            <button onclick="removeBillFromBatch(${idx})" class="text-[10px] text-slate-500 hover:text-rose-400">Remove</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function calculateBillChange() {
+      const tendered = Number(document.getElementById('bill-cash-tendered').value) || 0;
+      const subtotal = billBatch.reduce((sum, b) => sum + b.bill_amount, 0);
+      const fees = billBatch.reduce((sum, b) => sum + b.service_charge, 0);
+      const grand = subtotal + fees;
+      const change = Math.max(0, tendered - grand);
+
+      document.getElementById('bill-change-due').innerText = formatRs(change);
+    }
+
+    function processBillPayment() {
+      if (billBatch.length === 0) return;
+      const subtotal = billBatch.reduce((sum, b) => sum + b.bill_amount, 0);
+      const fees = billBatch.reduce((sum, b) => sum + b.service_charge, 0);
+      const grand = subtotal + fees;
+      const receiptNo = 'BILL-' + Math.floor(100000 + Math.random() * 900000);
+
+      const receiptHTML = `
+        <div class="text-center space-y-1 pb-3 border-b-2 border-dashed border-slate-300">
+          <h1 class="font-extrabold text-base uppercase">${storeSettings.store_name}</h1>
+          <p class="text-[10px] text-slate-600">${storeSettings.store_address}</p>
+          <p class="text-[10px] text-slate-700 font-semibold">Hotline: ${storeSettings.store_phone}</p>
+          <div class="inline-block px-2.5 py-0.5 mt-1 bg-black text-white text-[10px] font-bold rounded">UTILITY BILL RECEIPT</div>
+        </div>
+
+        <div class="py-2 space-y-1 border-b border-dashed border-slate-300 text-[10px]">
+          <div class="flex justify-between font-bold"><span>Receipt No:</span><span>${receiptNo}</span></div>
+          <div class="flex justify-between"><span>Date:</span><span>${new Date().toLocaleString()}</span></div>
+        </div>
+
+        <div class="py-2 border-b-2 border-dashed border-slate-300 space-y-2 text-[10px]">
+          <div class="flex justify-between font-bold border-b border-slate-200 pb-1">
+            <span>PROVIDER / ACC NO</span><span>TOTAL</span>
+          </div>
+          ${billBatch.map(b => `
+            <div class="space-y-0.5 pt-1">
+              <div class="flex justify-between font-bold">
+                <span>${b.provider_name}</span>
+                <span>${formatRs(b.total_payable)}</span>
+              </div>
+              <div class="flex justify-between text-[9px] text-slate-600">
+                <span>Acc: ${b.account_number}</span>
+                <span>Bill: ${formatRs(b.bill_amount)} + Fee: ${formatRs(b.service_charge)}</span>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+
+        <div class="py-2.5 space-y-1 border-b-2 border-dashed border-slate-300 text-xs">
+          <div class="flex justify-between text-[10px] text-slate-600"><span>Bills Subtotal:</span><span>${formatRs(subtotal)}</span></div>
+          <div class="flex justify-between text-[10px] text-indigo-700 font-semibold"><span>Service Fees:</span><span>+${formatRs(fees)}</span></div>
+          <div class="flex justify-between text-sm font-black text-slate-950 pt-1 border-t border-slate-200">
+            <span>GRAND TOTAL:</span><span class="text-emerald-700">${formatRs(grand)}</span>
+          </div>
+        </div>
+
+        <div class="pt-3 text-center space-y-1 text-[9px] text-slate-500">
+          <p>Please keep this receipt for payment confirmation.</p>
+          <p class="font-bold text-slate-800">*** THANK YOU ***</p>
+        </div>
+      `;
+
+      showPrintModal('80mm Bill Payment Receipt', receiptHTML);
+      clearBillBatch();
+      document.getElementById('bill-cash-tendered').value = '';
+      confetti({ particleCount: 60, spread: 60 });
+    }
+
+    // ==================== 4. DEBTORS LOGIC ====================
+    function renderDebtorsList() {
+      const container = document.getElementById('debtors-list-container');
+      const query = (document.getElementById('debtors-search')?.value || '').toLowerCase();
+      const totalDebt = debtors.reduce((sum, d) => sum + d.current_balance, 0);
+
+      document.getElementById('pos-debtors-badge').innerText = formatRs(totalDebt);
+
+      const filtered = debtors.filter(d => !query || d.name.toLowerCase().includes(query) || d.phone.includes(query));
+
+      if (filtered.length === 0) {
+        container.innerHTML = `<div class="p-6 text-center text-slate-500 text-xs">No debtors found.</div>`;
+        return;
+      }
+
+      container.innerHTML = filtered.map(d => `
+        <div onclick="selectDebtor('${d.id}')" class="p-3.5 rounded-2xl border cursor-pointer transition-all ${selectedDebtor?.id === d.id ? 'bg-amber-950/40 border-amber-500/80' : 'bg-slate-900 border-slate-800 hover:border-slate-700'}">
+          <div class="flex items-center justify-between mb-1">
+            <h4 class="text-xs font-bold text-white">${d.name}</h4>
+            <span class="font-mono text-xs font-bold ${d.current_balance > 0 ? 'text-rose-400' : 'text-emerald-400'}">
+              ${d.current_balance > 0 ? formatRs(d.current_balance) : 'Settled'}
+            </span>
+          </div>
+          <p class="text-[11px] text-slate-400 font-mono">${d.phone}</p>
+        </div>
+      `).join('');
+
+      renderDebtorDetail();
+    }
+
+    function selectDebtor(id) {
+      selectedDebtor = debtors.find(d => d.id === id) || null;
+      renderDebtorsList();
+    }
+
+    function renderDebtorDetail() {
+      const container = document.getElementById('debtor-detail-card');
+      if (!selectedDebtor) {
+        container.innerHTML = `<div class="p-12 text-center text-slate-500 text-xs">Select a debtor to view ledger</div>`;
+        return;
+      }
+
+      const txs = debtorTransactions.filter(t => t.debtor_id === selectedDebtor.id);
+
+      container.innerHTML = `
+        <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+          <div>
+            <span class="text-[10px] text-amber-400 font-bold uppercase">Customer Account</span>
+            <h3 class="text-lg font-black text-white">${selectedDebtor.name}</h3>
+            <p class="text-xs text-slate-400 font-mono">${selectedDebtor.phone} ${selectedDebtor.address ? '| ' + selectedDebtor.address : ''}</p>
+          </div>
+          <div class="text-right">
+            <span class="text-[10px] uppercase font-bold text-slate-400 block">Balance Due</span>
+            <span class="text-xl font-black font-mono ${selectedDebtor.current_balance > 0 ? 'text-rose-400' : 'text-emerald-400'}">
+              ${formatRs(selectedDebtor.current_balance)}
+            </span>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2 text-xs">
+          <button onclick="promptAddCredit()" class="py-2 px-3 rounded-xl bg-slate-950 border border-amber-500/30 text-amber-400 font-bold flex items-center justify-center space-x-1">
+            <span>+ Add Credit (ණයට දීම)</span>
+          </button>
+          <button onclick="promptSettleDebt()" class="py-2 px-3 rounded-xl bg-emerald-600 text-white font-bold flex items-center justify-center space-x-1">
+            <span>- Settle Payment (ණය පියවීම)</span>
+          </button>
+        </div>
+
+        <div class="space-y-2 pt-2 border-t border-slate-800">
+          <span class="text-xs font-bold text-slate-400 uppercase">Ledger History</span>
+          <div class="space-y-1.5 max-h-48 overflow-y-auto text-xs">
+            ${txs.length === 0 ? `<p class="text-slate-500 text-[11px]">No transactions yet.</p>` : txs.map(t => `
+              <div class="bg-slate-950 p-2 rounded-xl border border-slate-800 flex justify-between items-center">
+                <div>
+                  <p class="font-bold text-slate-200">${t.description}</p>
+                  <p class="text-[10px] text-slate-500">${new Date(t.created_at).toLocaleDateString()}</p>
+                </div>
+                <span class="font-mono font-bold ${t.type === 'credit_add' ? 'text-rose-400' : 'text-emerald-400'}">
+                  ${t.type === 'credit_add' ? '+' : '-'}${formatRs(t.amount)}
+                </span>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `;
+    }
+
+    function promptAddCredit() {
+      if (!selectedDebtor) return;
+      const amtStr = prompt('Enter credit amount to add (Rs.):');
+      const amt = Number(amtStr);
+      if (isNaN(amt) || amt <= 0) return;
+      const desc = prompt('Enter description (e.g. Phone Case & Bill payment):') || 'Credit Purchase';
+
+      selectedDebtor.current_balance += amt;
+      debtorTransactions.unshift({
+        id: 'dtx-' + Date.now(),
+        debtor_id: selectedDebtor.id,
+        type: 'credit_add',
+        amount: amt,
+        description: desc,
+        created_at: new Date().toISOString()
+      });
+
+      localStorage.setItem('apex_debtors', JSON.stringify(debtors));
+      localStorage.setItem('apex_debtor_txs', JSON.stringify(debtorTransactions));
+      renderDebtorsList();
+    }
+
+    function promptSettleDebt() {
+      if (!selectedDebtor) return;
+      const amtStr = prompt('Enter payment settlement amount (Rs.):', selectedDebtor.current_balance);
+      const amt = Number(amtStr);
+      if (isNaN(amt) || amt <= 0) return;
+
+      selectedDebtor.current_balance = Math.max(0, selectedDebtor.current_balance - amt);
+      debtorTransactions.unshift({
+        id: 'dtx-' + Date.now(),
+        debtor_id: selectedDebtor.id,
+        type: 'payment',
+        amount: amt,
+        description: 'Cash Payment Settlement',
+        created_at: new Date().toISOString()
+      });
+
+      localStorage.setItem('apex_debtors', JSON.stringify(debtors));
+      localStorage.setItem('apex_debtor_txs', JSON.stringify(debtorTransactions));
+      renderDebtorsList();
+    }
+
+    function openNewDebtorModal() { document.getElementById('modal-new-debtor').classList.remove('hidden'); }
+    function closeNewDebtorModal() { document.getElementById('modal-new-debtor').classList.add('hidden'); }
+
+    function saveNewDebtor(e) {
+      e.preventDefault();
+      const name = document.getElementById('deb-name').value.trim();
+      const phone = document.getElementById('deb-phone').value.trim();
+      const addr = document.getElementById('deb-address').value.trim();
+
+      debtors.unshift({
+        id: 'deb-' + Date.now(),
+        name,
+        phone,
+        address: addr,
+        current_balance: 0
+      });
+      localStorage.setItem('apex_debtors', JSON.stringify(debtors));
+      closeNewDebtorModal();
+      renderDebtorsList();
+    }
+
+    // ==================== 5. INVENTORY & SETTINGS LOGIC ====================
+    function renderInventoryTable() {
+      const container = document.getElementById('inventory-table-container');
+      container.innerHTML = `
+        <table class="w-full text-left text-xs text-slate-300">
+          <thead class="bg-slate-950 text-slate-400 text-[10px] uppercase font-bold border-b border-slate-800">
+            <tr>
+              <th class="py-2.5 px-3">Product Name</th>
+              <th class="py-2.5 px-3">Category</th>
+              <th class="py-2.5 px-3">Price</th>
+              <th class="py-2.5 px-3">Stock Remaining</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-800 font-mono">
+            ${products.map(p => `
+              <tr class="hover:bg-slate-800/40">
+                <td class="py-2.5 px-3 font-sans font-bold text-white">${p.name}</td>
+                <td class="py-2.5 px-3 font-sans text-slate-400">${p.category_id}</td>
+                <td class="py-2.5 px-3 text-emerald-400 font-bold">${formatRs(p.price)}</td>
+                <td class="py-2.5 px-3">${p.stock}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      `;
+    }
+
+    function renderOrdersTable() {
+      const container = document.getElementById('orders-table-container');
+      if (orders.length === 0) {
+        container.innerHTML = `<p class="p-8 text-center text-slate-500 text-xs">No sales orders recorded yet.</p>`;
+        return;
+      }
+      container.innerHTML = `
+        <table class="w-full text-left text-xs text-slate-300">
+          <thead class="bg-slate-950 text-slate-400 text-[10px] uppercase font-bold border-b border-slate-800">
+            <tr>
+              <th class="py-2.5 px-3">Invoice</th>
+              <th class="py-2.5 px-3">Customer</th>
+              <th class="py-2.5 px-3">Date</th>
+              <th class="py-2.5 px-3">Items</th>
+              <th class="py-2.5 px-3">Total</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-800 font-mono">
+            ${orders.map(o => `
+              <tr class="hover:bg-slate-800/40">
+                <td class="py-2.5 px-3 font-bold text-indigo-400">${o.invoice_number}</td>
+                <td class="py-2.5 px-3 font-sans text-white">${o.customer_name}</td>
+                <td class="py-2.5 px-3 font-sans text-slate-400">${new Date(o.created_at).toLocaleString()}</td>
+                <td class="py-2.5 px-3 font-sans">${o.items?.length || 1} items</td>
+                <td class="py-2.5 px-3 font-bold text-emerald-400">${formatRs(o.total)}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      `;
+    }
+
+    function loadSettingsForm() {
+      document.getElementById('cfg-store-name').value = storeSettings.store_name;
+      document.getElementById('cfg-store-address').value = storeSettings.store_address;
+      document.getElementById('cfg-store-phone').value = storeSettings.store_phone;
+      document.getElementById('cfg-currency-symbol').value = storeSettings.currency_symbol;
+    }
+
+    function saveStoreSettings(e) {
+      e.preventDefault();
+      storeSettings.store_name = document.getElementById('cfg-store-name').value;
+      storeSettings.store_address = document.getElementById('cfg-store-address').value;
+      storeSettings.store_phone = document.getElementById('cfg-store-phone').value;
+      storeSettings.currency_symbol = document.getElementById('cfg-currency-symbol').value;
+
+      localStorage.setItem('apex_settings', JSON.stringify(storeSettings));
+      document.getElementById('header-store-name').innerText = storeSettings.store_name;
+      alert('Settings saved successfully!');
+    }
+
+    // Modal Helpers
+    function showPrintModal(title, contentHTML) {
+      document.getElementById('print-modal-title').innerText = title;
+      document.getElementById('printable-area').innerHTML = contentHTML;
+      document.getElementById('modal-print-preview').classList.remove('hidden');
+    }
+    function closePrintModal() {
+      document.getElementById('modal-print-preview').classList.add('hidden');
+    }
+
+    function openCustomItemModal() { document.getElementById('modal-custom-item').classList.remove('hidden'); }
+    function closeCustomItemModal() { document.getElementById('modal-custom-item').classList.add('hidden'); }
+    function addCustomItemToCatalog(e) {
+      e.preventDefault();
+      const name = document.getElementById('cust-item-name').value.trim();
+      const price = Number(document.getElementById('cust-item-price').value) || 0;
+      const stock = Number(document.getElementById('cust-item-stock').value) || 10;
+
+      const newP = { id: 'prod-' + Date.now(), name, price, stock, category_id: 'cat-1', icon: 'tag' };
+      products.unshift(newP);
+      localStorage.setItem('apex_products', JSON.stringify(products));
+      closeCustomItemModal();
+      renderProductCatalog();
+    }
+
+    // Initialize on page load
+    window.addEventListener('DOMContentLoaded', () => {
+      document.getElementById('header-store-name').innerText = storeSettings.store_name;
+      renderCategoryPills();
+      renderProductCatalog();
+      renderCart();
+      renderRepairsList();
+      renderBillsView();
+      renderDebtorsList();
+      lucide.createIcons();
+    });
+  </script>
+</body>
+</html>
